@@ -1,0 +1,57 @@
+stages:
+  - build-ci
+  - test
+  - build-app
+  - deploy
+
+variables:
+  TAG: "$CI_REGISTRY_IMAGE/anestesia:$CI_COMMIT_SHA"
+
+build:
+  stage: build-ci
+  before_script:
+    - docker login -u anestesia -p ${TOKEN} ${CI_REGISTRY}
+  script:
+    - docker build --tag "$TAG" -f Dockerfile-app ./back
+    - docker push "$TAG"
+  tags:
+    - front
+
+check-sort:
+  stage: test
+  image: "$TAG"
+  script:
+    - isort --check-only ./back
+  tags:
+    - docker
+
+check-style:
+  stage: test
+  image: "$TAG"
+  script:
+    - black --check .
+  tags:
+    - docker
+
+full-test:
+  stage: test
+  image: "$TAG"
+  needs:
+    - check-sort
+    - check-style
+  rules:
+    - if: '$CI_MERGE_REQUEST_LABELS !~ /skip-tests/'
+  script:
+    - echo "Run full tests..."
+    - sleep 30
+  tags:
+    - docker
+
+deploy:
+  stage: deploy
+  image: docker:latest
+  script:
+    - echo "Deploy"
+  when: manual
+  tags:
+    - docker

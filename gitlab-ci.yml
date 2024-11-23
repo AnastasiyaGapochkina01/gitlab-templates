@@ -1,0 +1,39 @@
+include:
+  - 'https://anestesia-tech.gitlab.yandexcloud.net/anestesia/gitlabci-templates/-/raw/main/template.yml'
+
+variables:
+  PROJECT: flask-simplest
+
+build:
+  extends: .build-template
+  tags:
+    - front
+
+check-sort:
+  stage: test
+  image: "$TAG"
+  script:
+    - isort --check-only ./back
+  tags:
+    - docker
+
+check-style:
+  stage: test
+  image: "$TAG"
+  script:
+    - black --check .
+  tags:
+    - docker
+
+full-test:
+  extends: .test-template
+  tags:
+    - docker
+
+deploy-dev:
+  extends: .deploy-template
+  variables:
+    ENV: 'dev' 
+  tags:
+    - docker
+

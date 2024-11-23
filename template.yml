@@ -1,0 +1,39 @@
+stages:
+  - build
+  - test
+  - deploy
+
+.build-template:
+  stage: build
+  when: always
+  variables:
+    TAG: "$CI_REGISTRY_IMAGE/anestesia/$PROJECT:$CI_COMMIT_SHA"
+  before_script:
+    - docker login -u anestesia -p ${TOKEN} ${CI_REGISTRY}
+  script:
+    - docker build --tag "$TAG" -f ./Dockerfile-app ./back
+    - docker push "$TAG"
+
+.test-template:
+  stage: test
+  image: "$TAG"
+  variables:
+   TAG: "$CI_REGISTRY_IMAGE/anestesia/$PROJECT:$CI_COMMIT_SHA"
+  rules:
+    - if: '$PARENT_LABELS !~ /skip-tests/'
+  script:
+    - echo $PARENT_LABELS
+    - sleep 30
+
+.deploy-template:
+  stage: deploy
+  image: docker:latest
+  script:
+    - echo "Deploy to $ENV app $JOB_NAME"
+  when: manual
+  variables:
+    ENV: ""
+  needs:
+    - build
+  before_script:
+    - export DEPLOY_URL=$ENV.example.com
